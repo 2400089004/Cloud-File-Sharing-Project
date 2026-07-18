@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Cloud File Sharing Platform</title>
+   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+
+        <div class="logo">
+            ☁️ CloudShare
+        </div>
+
+        <h2>Login Safely</h2>
+
+        <form method="post">
+            <label>email</label>
+            <input type="email" 
+            name="email"
+            placeholder="enter email"
+            required>
+            <label>password</label>
+            <input type="password"
+            name="password"
+            placeholder="enter password"
+            required>
+            <button type="submit">login</button>
+        </form>
+
+        <p>
+            Don't have an account?
+            <a href="/">Register</a>
+        </p>
+
+    </div>
+</body>

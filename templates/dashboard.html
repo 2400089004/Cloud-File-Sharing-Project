@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CloudShare</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+
+<body>
+
+    <div class="dashboard">
+
+        <h1>☁️ CloudShare Dashboard</h1>
+
+        <h2>Welcome {{ username }}</h2>
+
+        <!-- Upload Card -->
+        <div class="card">
+
+            <h3>Upload File</h3>
+
+            <form method="POST"
+                  action="/upload"
+                  enctype="multipart/form-data">
+
+                <input type="file" name="file" required>
+
+                <br><br>
+
+                <button type="submit">
+                    Upload
+                </button>
+
+            </form>
+
+        </div>
+
+        <!-- My Files Card -->
+        <div class="card">
+
+            <h3>My Files</h3>
+
+            <div class="card">
+
+    <h3>My Files</h3>
+
+    <ul>
+
+        {% for file in files %}
+
+        <li>
+
+            {{ file }}
+
+            <a href="/download/{{ file }}">
+                <button type="button">
+                    Download
+                </button>
+            </a>
+
+            <a href="/delete/{{ file }}">
+                <button type="button">
+                    Delete
+                </button>
+            </a>
+
+        </li>
+
+        {% endfor %}
+
+    </ul>
+
+</div>
+
+        </div>
+
+        <!-- Logout -->
+        <a href="/logout">
+            <button type="button">
+                Logout
+            </button>
+        </a>
+
+    </div>
+
+</body>
+
+</html>
