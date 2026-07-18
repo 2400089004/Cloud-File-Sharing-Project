@@ -1,0 +1,5 @@
+cloud.env
+__pycache__/
+uploads/
+*.pyc
+venv/
