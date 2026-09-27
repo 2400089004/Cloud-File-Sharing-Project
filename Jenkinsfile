@@ -1,36 +1,88 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = 'cloud-file-sharing:latest'
+        CONTAINER_NAME = 'cloud-file-sharing'
+
+        MYSQL_HOST = 'host.docker.internal'
+        MYSQL_USER = 'cloudapp'
+        MYSQL_DATABASE = 'cloud_storage'
+
+        AWS_REGION = 'ap-south-1'
+        BUCKET_NAME = 'bhargava-s33'
+    }
+
     stages {
 
-        stage('Clone') {
+        stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/2400089004/Cloud-File-Sharing-Project.git'
+                checkout scm
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Build Docker Image') {
             steps {
                 sh '''
-                    python3 -m venv venv
-                    . venv/bin/activate
-                    pip install -r requirements.txt
+                    docker build --no-cache -t ${IMAGE_NAME} .
                 '''
             }
         }
 
-        stage('Deploy to EC2') {
+        stage('Stop Old Container') {
             steps {
                 sh '''
-                    ssh -o StrictHostKeyChecking=no ubuntu@100.28.2.201"
-                        cd ~/Cloud-File-Sharing-Project &&
-                        git pull origin main &&
-                        source venv/bin/activate &&
-                        pip install -r requirements.txt
-                    "
+                    docker rm -f ${CONTAINER_NAME} || true
                 '''
             }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'mysql-password',
+                        variable: 'MYSQL_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        docker run -d \
+                          --name ${CONTAINER_NAME} \
+                          --add-host=host.docker.internal:host-gateway \
+                          -e MYSQL_HOST=${MYSQL_HOST} \
+                          -e MYSQL_USER=${MYSQL_USER} \
+                          -e MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
+                          -e MYSQL_DATABASE=${MYSQL_DATABASE} \
+                          -e AWS_REGION=${AWS_REGION} \
+                          -e BUCKET_NAME=${BUCKET_NAME} \
+                          -p 5000:5000 \
+                          ${IMAGE_NAME}
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                    sleep 5
+                    docker ps
+                    curl -f http://127.0.0.1:5000
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '======================================'
+            echo 'Cloud File Sharing deployed successfully'
+            echo 'http://18.212.207.16:5000/'
+            echo '======================================'
+        }
+
+        failure {
+            echo 'Deployment failed. Check the Jenkins console output.'
         }
     }
 }
