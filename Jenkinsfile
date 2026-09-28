@@ -24,6 +24,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
+                    echo "===== Building Docker Image ====="
                     docker build --no-cache -t ${IMAGE_NAME} .
                 '''
             }
@@ -32,6 +33,7 @@ pipeline {
         stage('Stop Old Container') {
             steps {
                 sh '''
+                    echo "===== Stopping Old Container ====="
                     docker rm -f ${CONTAINER_NAME} || true
                 '''
             }
@@ -41,17 +43,19 @@ pipeline {
             steps {
                 withCredentials([
                     string(
-                        credentialsId: 'mysql_password',
-                        variable: 'bh@rgava12'
+                        credentialsId: 'mysql-password',
+                        variable: 'MYSQL_PASSWORD'
                     )
                 ]) {
                     sh '''
+                        echo "===== Deploying Container ====="
+
                         docker run -d \
                           --name ${CONTAINER_NAME} \
                           --add-host=host.docker.internal:host-gateway \
                           -e MYSQL_HOST=${MYSQL_HOST} \
                           -e MYSQL_USER=${MYSQL_USER} \
-                          -e MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
+                          -e MYSQL_PASSWORD="$MYSQL_PASSWORD" \
                           -e MYSQL_DATABASE=${MYSQL_DATABASE} \
                           -e AWS_REGION=${AWS_REGION} \
                           -e BUCKET_NAME=${BUCKET_NAME} \
@@ -65,9 +69,11 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
-                    sleep 5
-                    echo "===== Docker Containers ====="
-                    docker ps
+                    echo "===== Waiting for Application ====="
+                    sleep 10
+
+                    echo "===== Container Status ====="
+                    docker ps -a
 
                     echo "===== Application Test ====="
                     curl -f http://127.0.0.1:5000/
@@ -77,24 +83,32 @@ pipeline {
     }
 
     post {
+
         success {
-            echo '======================================'
-            echo 'Cloud File Sharing deployed successfully'
-            echo '======================================'
-            echo 'Application: http://18.212.207.16:5000/'
+            echo '''
+========================================
+ Cloud File Sharing Deployment SUCCESS
+========================================
+ Application:
+ http://18.212.207.16:5000/
+========================================
+'''
         }
 
         failure {
-            echo '======================================'
-            echo 'Deployment failed.'
-            echo 'Check the Jenkins console output.'
-            echo '======================================'
+            echo '''
+========================================
+ Cloud File Sharing Deployment FAILED
+========================================
+ Checking container logs...
+========================================
+'''
 
             sh '''
-                echo "===== Container Status ====="
+                echo "===== Docker Containers ====="
                 docker ps -a
 
-                echo "===== Container Logs ====="
+                echo "===== Application Logs ====="
                 docker logs ${CONTAINER_NAME} || true
             '''
         }
