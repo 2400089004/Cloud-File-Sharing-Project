@@ -17,30 +17,26 @@ pipeline {
 
         stage('Checkout') {
             steps {
+                echo '===== Checkout Source Code ====='
                 checkout scm
             }
         }
 
         stage('Build Docker Image') {
             steps {
+                echo '===== Build Docker Image ====='
+
                 sh '''
-                    echo "===== Building Docker Image ====="
-                    docker build --no-cache -t ${IMAGE_NAME} .
+                    docker build --no-cache \
+                        -t ${IMAGE_NAME} .
                 '''
             }
         }
 
-        stage('Stop Old Container') {
+        stage('Test MySQL Credential') {
             steps {
-                sh '''
-                    echo "===== Stopping Old Container ====="
-                    docker rm -f ${CONTAINER_NAME} || true
-                '''
-            }
-        }
+                echo '===== Test Jenkins MySQL Credential ====='
 
-        stage('Deploy Container') {
-            steps {
                 withCredentials([
                     string(
                         credentialsId: 'mysql-password',
@@ -48,17 +44,47 @@ pipeline {
                     )
                 ]) {
                     sh '''
-                        echo "===== Deploying Container ====="
+                        if [ -z "$MYSQL_PASSWORD" ]; then
+                            echo "ERROR: MYSQL_PASSWORD is EMPTY"
+                            exit 1
+                        else
+                            echo "SUCCESS: MYSQL_PASSWORD is available"
+                        fi
+                    '''
+                }
+            }
+        }
 
+        stage('Stop Old Container') {
+            steps {
+                echo '===== Stop Old Container ====='
+
+                sh '''
+                    docker rm -f ${CONTAINER_NAME} || true
+                '''
+            }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                echo '===== Deploy New Container ====='
+
+                withCredentials([
+                    string(
+                        credentialsId: 'mysql-password',
+                        variable: 'MYSQL_PASSWORD'
+                    )
+                ]) {
+                    sh '''
                         docker run -d \
                           --name ${CONTAINER_NAME} \
                           --add-host=host.docker.internal:host-gateway \
-                          -e MYSQL_HOST=${MYSQL_HOST} \
-                          -e MYSQL_USER=${MYSQL_USER} \
+                          -e MYSQL_HOST="${MYSQL_HOST}" \
+                          -e MYSQL_USER="${MYSQL_USER}" \
                           -e MYSQL_PASSWORD="$MYSQL_PASSWORD" \
-                          -e MYSQL_DATABASE=${MYSQL_DATABASE} \
-                          -e AWS_REGION=${AWS_REGION} \
-                          -e BUCKET_NAME=${BUCKET_NAME} \
+                          -e MYSQL_DATABASE="${MYSQL_DATABASE}" \
+                          -e AWS_REGION="${AWS_REGION}" \
+                          -e BUCKET_NAME="${BUCKET_NAME}" \
                           -p 5000:5000 \
                           ${IMAGE_NAME}
                     '''
@@ -68,11 +94,12 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
+                echo '===== Verify Deployment ====='
+
                 sh '''
-                    echo "===== Waiting for Application ====="
                     sleep 10
 
-                    echo "===== Container Status ====="
+                    echo "===== Docker Containers ====="
                     docker ps -a
 
                     echo "===== Application Test ====="
@@ -89,8 +116,10 @@ pipeline {
 ========================================
  Cloud File Sharing Deployment SUCCESS
 ========================================
- Application:
- http://18.212.207.16:5000/
+
+Application:
+http://18.212.207.16:5000/
+
 ========================================
 '''
         }
@@ -100,7 +129,9 @@ pipeline {
 ========================================
  Cloud File Sharing Deployment FAILED
 ========================================
- Checking container logs...
+
+Checking Docker container and application logs...
+
 ========================================
 '''
 
@@ -108,7 +139,7 @@ pipeline {
                 echo "===== Docker Containers ====="
                 docker ps -a
 
-                echo "===== Application Logs ====="
+                echo "===== Container Logs ====="
                 docker logs ${CONTAINER_NAME} || true
             '''
         }
