@@ -3,10 +3,10 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'cloud-file-sharing:latest'
-        CONTAINER_NAME = 'cloud-file-sharing'
+        CONTAINER_NAME = 'cloud-sharing-file'
 
         MYSQL_HOST = 'host.docker.internal'
-        MYSQL_USER = 'cloudapp'
+        MYSQL_USER = 'clouduser'
         MYSQL_DATABASE = 'cloud_storage'
 
         AWS_REGION = 'ap-south-1'
@@ -66,8 +66,11 @@ pipeline {
             steps {
                 sh '''
                     sleep 5
+                    echo "===== Docker Containers ====="
                     docker ps
-                    curl -f http://127.0.0.1:5000
+
+                    echo "===== Application Test ====="
+                    curl -f http://127.0.0.1:5000/
                 '''
             }
         }
@@ -77,12 +80,23 @@ pipeline {
         success {
             echo '======================================'
             echo 'Cloud File Sharing deployed successfully'
-            echo 'http://18.212.207.16:5000/'
             echo '======================================'
+            echo 'Application: http://18.212.207.16:5000/'
         }
 
         failure {
-            echo 'Deployment failed. Check the Jenkins console output.'
+            echo '======================================'
+            echo 'Deployment failed.'
+            echo 'Check the Jenkins console output.'
+            echo '======================================'
+
+            sh '''
+                echo "===== Container Status ====="
+                docker ps -a
+
+                echo "===== Container Logs ====="
+                docker logs ${CONTAINER_NAME} || true
+            '''
         }
     }
 }
