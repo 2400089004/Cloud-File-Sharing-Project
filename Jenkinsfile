@@ -41,8 +41,8 @@ pipeline {
             steps {
                 withCredentials([
                     string(
-                        credentialsId: 'mysql-password',
-                        variable: 'MYSQL_PASSWORD'
+                        credentialsId: 'mysql_password',
+                        variable: 'bh@rgava12'
                     )
                 ]) {
                     sh '''
