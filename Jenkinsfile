@@ -123,7 +123,7 @@ pipeline {
 
                     echo "===== TEST APPLICATION ====="
 
-                    curl -f http://${EC2_PUBLIC_IP}:5000/
+                    curl -f http://$34.229.20.232:5000/
                 '''
             }
         }
