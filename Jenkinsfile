@@ -4,26 +4,37 @@ pipeline {
 
     environment {
 
+        // ==============================
         // Docker
+        // ==============================
         IMAGE_NAME = 'cloud-file-sharing:latest'
         CONTAINER_NAME = 'cloud-sharing-file'
 
+        // ==============================
         // MySQL
+        // ==============================
         MYSQL_HOST = 'host.docker.internal'
         MYSQL_USER = 'clouduser'
-        MYSQL_PASSWORD = 'bh@rgava12'
+        MYSQL_PASSWORD = 'YOUR_MYSQL_PASSWORD'
         MYSQL_DATABASE = 'cloud_storage'
 
+        // ==============================
         // AWS S3
+        // ==============================
         AWS_REGION = 'ap-south-1'
         BUCKET_NAME = 'bhargava-s33'
 
+        // ==============================
         // EC2
+        // ==============================
         EC2_PUBLIC_IP = '34.229.20.232'
     }
 
     stages {
 
+        // ==============================
+        // 1. CHECKOUT
+        // ==============================
         stage('Checkout') {
             steps {
 
@@ -34,6 +45,9 @@ pipeline {
             }
         }
 
+        // ==============================
+        // 2. BUILD DOCKER IMAGE
+        // ==============================
         stage('Build Docker Image') {
             steps {
 
@@ -45,6 +59,9 @@ pipeline {
             }
         }
 
+        // ==============================
+        // 3. REMOVE OLD CONTAINER
+        // ==============================
         stage('Remove Old Container') {
             steps {
 
@@ -57,6 +74,9 @@ pipeline {
             }
         }
 
+        // ==============================
+        // 4. RUN DOCKER CONTAINER
+        // ==============================
         stage('Run Docker Container') {
             steps {
 
@@ -78,6 +98,9 @@ pipeline {
             }
         }
 
+        // ==============================
+        // 5. CHECK CONTAINER
+        // ==============================
         stage('Check Container') {
             steps {
 
@@ -98,6 +121,9 @@ pipeline {
             }
         }
 
+        // ==============================
+        // 6. APPLICATION LOGS
+        // ==============================
         stage('Application Logs') {
             steps {
 
@@ -109,6 +135,9 @@ pipeline {
             }
         }
 
+        // ==============================
+        // 7. VERIFY DEPLOYMENT
+        // ==============================
         stage('Verify Deployment') {
             steps {
 
@@ -129,8 +158,14 @@ pipeline {
         }
     }
 
+    // ==============================
+    // POST ACTIONS
+    // ==============================
     post {
 
+        // ==============================
+        // SUCCESS
+        // ==============================
         success {
 
             echo '''
@@ -145,12 +180,15 @@ Docker Container:
 cloud-sharing-file
 
 Docker Image:
-cloud-file-sharing
+cloud-file-sharing:latest
 
 ========================================
 '''
         }
 
+        // ==============================
+        // FAILURE
+        // ==============================
         failure {
 
             echo '''
