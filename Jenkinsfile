@@ -1,7 +1,6 @@
 pipeline {
 agent any
 
-```
 environment {
     IMAGE_NAME = 'cloud-file-sharing:latest'
     CONTAINER_NAME = 'cloud-sharing-file'
