@@ -1,3 +1,4 @@
+```groovy
 pipeline {
     agent any
 
@@ -7,6 +8,7 @@ pipeline {
 
         MYSQL_HOST = 'host.docker.internal'
         MYSQL_USER = 'clouduser'
+        MYSQL_PASSWORD = 'bh@rgava12'
         MYSQL_DATABASE = 'cloud_storage'
 
         AWS_REGION = 'ap-south-1'
@@ -15,13 +17,21 @@ pipeline {
 
     stages {
 
+        // ==========================================
+        // 1. CHECKOUT SOURCE CODE
+        // ==========================================
         stage('Checkout') {
             steps {
                 echo '===== Checkout Source Code ====='
+
                 checkout scm
             }
         }
 
+
+        // ==========================================
+        // 2. BUILD DOCKER IMAGE
+        // ==========================================
         stage('Build Docker Image') {
             steps {
                 echo '===== Build Docker Image ====='
@@ -33,28 +43,29 @@ pipeline {
             }
         }
 
-        stage('Test MySQL Credential') {
-            steps {
-                echo '===== Test Jenkins MySQL Credential ====='
 
-                withCredentials([
-                    string(
-                        credentialsId: 'mysql-password',
-                        variable: 'MYSQL_PASSWORD'
-                    )
-                ]) {
-                    sh '''
-                        if [ -z "$MYSQL_PASSWORD" ]; then
-                            echo "ERROR: MYSQL_PASSWORD is EMPTY"
-                            exit 1
-                        else
-                            echo "SUCCESS: MYSQL_PASSWORD is available"
-                        fi
-                    '''
-                }
+        // ==========================================
+        // 3. TEST MYSQL CONFIGURATION
+        // ==========================================
+        stage('Test MySQL Configuration') {
+            steps {
+                echo '===== Test MySQL Configuration ====='
+
+                sh '''
+                    if [ -z "$MYSQL_PASSWORD" ]; then
+                        echo "ERROR: MYSQL_PASSWORD is EMPTY"
+                        exit 1
+                    fi
+
+                    echo "SUCCESS: MYSQL_PASSWORD is configured"
+                '''
             }
         }
 
+
+        // ==========================================
+        // 4. STOP OLD CONTAINER
+        // ==========================================
         stage('Stop Old Container') {
             steps {
                 echo '===== Stop Old Container ====='
@@ -65,50 +76,88 @@ pipeline {
             }
         }
 
+
+        // ==========================================
+        // 5. DEPLOY CONTAINER
+        // ==========================================
         stage('Deploy Container') {
             steps {
                 echo '===== Deploy New Container ====='
 
-                withCredentials([
-                    string(
-                        credentialsId: 'mysql-password',
-                        variable: 'MYSQL_PASSWORD'
-                    )
-                ]) {
-                    sh '''
-                        docker run -d \
-                          --name ${CONTAINER_NAME} \
-                          --add-host=host.docker.internal:host-gateway \
-                          -e MYSQL_HOST="${MYSQL_HOST}" \
-                          -e MYSQL_USER="${MYSQL_USER}" \
-                          -e MYSQL_PASSWORD="$MYSQL_PASSWORD" \
-                          -e MYSQL_DATABASE="${MYSQL_DATABASE}" \
-                          -e AWS_REGION="${AWS_REGION}" \
-                          -e BUCKET_NAME="${BUCKET_NAME}" \
-                          -p 5000:5000 \
-                          ${IMAGE_NAME}
-                    '''
-                }
+                sh '''
+                    docker run -d \
+                      --name ${CONTAINER_NAME} \
+                      --add-host=host.docker.internal:host-gateway \
+                      -e MYSQL_HOST="${MYSQL_HOST}" \
+                      -e MYSQL_USER="${MYSQL_USER}" \
+                      -e MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
+                      -e MYSQL_DATABASE="${MYSQL_DATABASE}" \
+                      -e AWS_REGION="${AWS_REGION}" \
+                      -e BUCKET_NAME="${BUCKET_NAME}" \
+                      -p 5000:5000 \
+                      ${IMAGE_NAME}
+                '''
             }
         }
 
+
+        // ==========================================
+        // 6. CHECK CONTAINER ENVIRONMENT
+        // ==========================================
+        stage('Check Container Environment') {
+            steps {
+                echo '===== Check Container Environment ====='
+
+                sh '''
+                    sleep 3
+
+                    if docker inspect ${CONTAINER_NAME} \
+                        --format '{{range .Config.Env}}{{println .}}{{end}}' \
+                        | grep -q '^MYSQL_PASSWORD='; then
+
+                        echo "SUCCESS: MYSQL_PASSWORD exists inside container"
+
+                    else
+
+                        echo "ERROR: MYSQL_PASSWORD missing inside container"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+
+
+        // ==========================================
+        // 7. VERIFY DEPLOYMENT
+        // ==========================================
         stage('Verify Deployment') {
             steps {
                 echo '===== Verify Deployment ====='
 
                 sh '''
-                    sleep 10
+                    sleep 8
 
                     echo "===== Docker Containers ====="
                     docker ps -a
 
+                    echo "===== Container Status ====="
+                    docker inspect ${CONTAINER_NAME} \
+                        --format='Status: {{.State.Status}} ExitCode: {{.State.ExitCode}}'
+
+                    echo "===== Container Logs ====="
+                    docker logs ${CONTAINER_NAME} || true
+
                     echo "===== Application Test ====="
-                    curl -f http://127.0.0.1:5000/
+                    curl -f http://34.229.20.232:5000/
                 '''
             }
         }
     }
 
+
+    // ==========================================
+    // POST ACTIONS
+    // ==========================================
     post {
 
         success {
@@ -118,11 +167,18 @@ pipeline {
 ========================================
 
 Application:
-http://18.212.207.16:5000/
+http://34.229.20.232:5000/
+
+Docker Container:
+cloud-sharing-file
+
+Docker Image:
+cloud-file-sharing:latest
 
 ========================================
 '''
         }
+
 
         failure {
             echo '''
@@ -130,7 +186,8 @@ http://18.212.207.16:5000/
  Cloud File Sharing Deployment FAILED
 ========================================
 
-Checking Docker container and application logs...
+Checking Docker container status
+and application logs...
 
 ========================================
 '''
@@ -145,3 +202,4 @@ Checking Docker container and application logs...
         }
     }
 }
+```
