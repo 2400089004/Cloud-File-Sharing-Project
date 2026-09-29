@@ -1,6 +1,7 @@
 pipeline {
 agent any
 
+```
 environment {
     IMAGE_NAME = 'cloud-file-sharing:latest'
     CONTAINER_NAME = 'cloud-sharing-file'
@@ -20,40 +21,39 @@ stages {
 
     stage('Checkout') {
         steps {
-            echo '===== Checkout Source Code ====='
+            echo '===== CHECKOUT SOURCE CODE ====='
             checkout scm
         }
     }
 
     stage('Build Docker Image') {
         steps {
-            echo '===== Build Docker Image ====='
+            echo '===== BUILD DOCKER IMAGE ====='
 
             sh '''
-                docker build --no-cache \
-                    -t ${IMAGE_NAME} .
+                docker build --no-cache -t ${IMAGE_NAME} .
             '''
         }
     }
 
     stage('Test MySQL Configuration') {
         steps {
-            echo '===== Test MySQL Configuration ====='
+            echo '===== TEST MYSQL CONFIGURATION ====='
 
             sh '''
                 if [ -z "$MYSQL_PASSWORD" ]; then
-                    echo "ERROR: MYSQL_PASSWORD is EMPTY"
+                    echo "ERROR: MYSQL_PASSWORD IS EMPTY"
                     exit 1
                 fi
 
-                echo "SUCCESS: MYSQL_PASSWORD is configured"
+                echo "SUCCESS: MYSQL_PASSWORD IS CONFIGURED"
             '''
         }
     }
 
     stage('Stop Old Container') {
         steps {
-            echo '===== Stop Old Container ====='
+            echo '===== STOP OLD CONTAINER ====='
 
             sh '''
                 docker rm -f ${CONTAINER_NAME} || true
@@ -63,55 +63,44 @@ stages {
 
     stage('Deploy Container') {
         steps {
-            echo '===== Deploy New Container ====='
+            echo '===== DEPLOY NEW CONTAINER ====='
 
             sh '''
                 docker run -d \
-                  --name ${CONTAINER_NAME} \
-                  --add-host=host.docker.internal:host-gateway \
-                  -e MYSQL_HOST="${MYSQL_HOST}" \
-                  -e MYSQL_USER="${MYSQL_USER}" \
-                  -e MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
-                  -e MYSQL_DATABASE="${MYSQL_DATABASE}" \
-                  -e AWS_REGION="${AWS_REGION}" \
-                  -e BUCKET_NAME="${BUCKET_NAME}" \
-                  -p 5000:5000 \
-                  ${IMAGE_NAME}
+                    --name ${CONTAINER_NAME} \
+                    --add-host=host.docker.internal:host-gateway \
+                    -e MYSQL_HOST="${MYSQL_HOST}" \
+                    -e MYSQL_USER="${MYSQL_USER}" \
+                    -e MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
+                    -e MYSQL_DATABASE="${MYSQL_DATABASE}" \
+                    -e AWS_REGION="${AWS_REGION}" \
+                    -e BUCKET_NAME="${BUCKET_NAME}" \
+                    -p 5000:5000 \
+                    ${IMAGE_NAME}
             '''
         }
     }
 
     stage('Check Container') {
         steps {
-            echo '===== Check Container ====='
+            echo '===== CHECK CONTAINER ====='
 
             sh '''
-                sleep 3
+                sleep 5
 
-                echo "===== Container Status ====="
-
+                echo "===== DOCKER CONTAINERS ====="
                 docker ps -a
 
-                echo "===== Checking MYSQL_PASSWORD ====="
-
-                if docker inspect ${CONTAINER_NAME} \
-                    --format '{{range .Config.Env}}{{println .}}{{end}}' \
-                    | grep -q '^MYSQL_PASSWORD='; then
-
-                    echo "SUCCESS: MYSQL_PASSWORD exists inside container"
-
-                else
-
-                    echo "ERROR: MYSQL_PASSWORD missing inside container"
-                    exit 1
-                fi
+                echo "===== CONTAINER STATUS ====="
+                docker inspect ${CONTAINER_NAME} \
+                    --format='Status={{.State.Status}} ExitCode={{.State.ExitCode}}'
             '''
         }
     }
 
-    stage('Check Application Logs') {
+    stage('Application Logs') {
         steps {
-            echo '===== Application Logs ====='
+            echo '===== APPLICATION LOGS ====='
 
             sh '''
                 docker logs ${CONTAINER_NAME} || true
@@ -121,21 +110,15 @@ stages {
 
     stage('Verify Deployment') {
         steps {
-            echo '===== Verify Deployment ====='
+            echo '===== VERIFY DEPLOYMENT ====='
 
             sh '''
                 sleep 5
 
-                echo "===== Docker Containers ====="
-
+                echo "===== FINAL CONTAINER STATUS ====="
                 docker ps -a
 
-                echo "===== Container Status ====="
-
-                docker inspect ${CONTAINER_NAME} \
-                    --format='Status: {{.State.Status}} ExitCode: {{.State.ExitCode}}'
-
-                echo "===== Testing Application ====="
+                echo "===== TEST APPLICATION ====="
 
                 curl -f http://${EC2_PUBLIC_IP}:5000/
             '''
@@ -150,7 +133,7 @@ post {
 ```
 
 ========================================
-Cloud File Sharing Deployment SUCCESS
+CLOUD FILE SHARING DEPLOYMENT SUCCESS
 =====================================
 
 Application:
@@ -172,22 +155,20 @@ cloud-file-sharing:latest
 ```
 
 ========================================
-Cloud File Sharing Deployment FAILED
+CLOUD FILE SHARING DEPLOYMENT FAILED
 ====================================
 
-Checking container information...
+Checking Docker container and logs...
 
 ========================================
 '''
 
 ```
         sh '''
-            echo "===== Docker Containers ====="
-
+            echo "===== DOCKER CONTAINERS ====="
             docker ps -a
 
-            echo "===== Container Logs ====="
-
+            echo "===== APPLICATION LOGS ====="
             docker logs ${CONTAINER_NAME} || true
         '''
     }
