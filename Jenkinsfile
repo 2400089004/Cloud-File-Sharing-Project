@@ -123,7 +123,7 @@ pipeline {
 
                     echo "===== TEST APPLICATION ====="
 
-                    curl -f http://$34.229.20.232:5000/
+                    curl -f http://127.0.0.1:5000/
                 '''
             }
         }
